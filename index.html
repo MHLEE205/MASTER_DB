@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LEENAI Master DB — Column Builder v1.0</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2128;
+    --border: #30363d;
+    --accent: #00c6a2;
+    --accent2: #0078d4;
+    --text: #e6edf3;
+    --text-sub: #8b949e;
+    --ok: #3fb950;
+    --warn: #d29922;
+    --err: #f85149;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-mark { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; color: #000; }
+  .logo-text h1 { font-size: 16px; font-weight: 700; color: var(--text); }
+  .logo-text span { font-size: 11px; color: var(--text-sub); }
+  .version-badge { background: var(--surface2); border: 1px solid var(--border); padding: 4px 10px; border-radius: 20px; font-size: 11px; color: var(--text-sub); }
+  main { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
+  .card-title { font-size: 14px; font-weight: 600; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .card-title::before { content: ''; width: 3px; height: 14px; background: var(--accent); border-radius: 2px; }
+  .btn { padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #00ddb5; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .status-bar { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); margin-bottom: 20px; font-size: 13px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.ok { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+  .status-dot.warn { background: var(--warn); }
+  .status-dot.idle { background: var(--text-sub); }
+  .log-box { background: #0d1117; border: 1px solid var(--border); border-radius: 6px; padding: 16px; height: 320px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.7; }
+  .log-line { display: flex; gap: 10px; }
+  .log-time { color: var(--text-sub); flex-shrink: 0; }
+  .log-ok { color: var(--ok); }
+  .log-err { color: var(--err); }
+  .log-warn { color: var(--warn); }
+  .log-info { color: var(--accent); }
+  .progress-wrap { margin: 16px 0; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-sub); margin-bottom: 6px; }
+  .progress-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s; width: 0%; }
+  .table-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .table-card { border: 1px solid var(--border); border-radius: 6px; padding: 16px; cursor: pointer; transition: all 0.15s; background: var(--surface2); }
+  .table-card:hover { border-color: var(--accent); }
+  .table-card.selected { border-color: var(--accent); background: rgba(0,198,162,0.08); }
+  .table-card h3 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .table-card p { font-size: 11px; color: var(--text-sub); }
+  .col-count { font-size: 11px; color: var(--accent); margin-top: 8px; font-weight: 600; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 600; margin: 2px; }
+  .tag-text { background: rgba(0,120,212,0.2); color: var(--accent2); }
+  .tag-choice { background: rgba(210,153,34,0.2); color: var(--warn); }
+  .tag-email { background: rgba(63,185,80,0.2); color: var(--ok); }
+  .tag-memo { background: rgba(248,81,73,0.2); color: var(--err); }
+  .tag-bool { background: rgba(0,198,162,0.2); color: var(--accent); }
+  .tag-int { background: rgba(139,148,158,0.2); color: var(--text-sub); }
+  #loginSection { text-align: center; padding: 48px 24px; }
+  #loginSection h2 { font-size: 22px; margin-bottom: 8px; }
+  #loginSection p { color: var(--text-sub); margin-bottom: 24px; font-size: 14px; }
+  footer { text-align: center; padding: 24px; font-size: 11px; color: var(--text-sub); border-top: 1px solid var(--border); margin-top: 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-mark">L</div>
+    <div class="logo-text">
+      <h1>LEENAI Master DB — Column Builder</h1>
+      <span>Dataverse テーブル 컬럼 일괄 생성 툴</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span class="version-badge">v1.0</span>
+    <span id="userBadge" style="font-size:12px;color:var(--text-sub);display:none;"></span>
+  </div>
+</header>
+<main>
+  <div id="loginSection">
+    <h2>Microsoft アカウントでサインイン</h2>
+    <p>Dataverse に接続するために Microsoft 365 アカウントが必要です</p>
+    <button class="btn btn-primary" onclick="startLogin()">🔑 Microsoft でサインイン</button>
+    <p style="margin-top:16px;font-size:11px;color:var(--text-sub);">※ このツールは株式会社リニア の Dataverse 環境にのみ接続します</p>
+  </div>
+  <div id="mainSection" style="display:none;">
+    <div class="status-bar">
+      <div class="status-dot ok" id="connDot"></div>
+      <span id="connStatus">Dataverse 접속 중...</span>
+    </div>
+    <div class="card">
+      <div class="card-title">실행할 작업 선택</div>
+      <div class="table-grid">
+        <div class="table-card selected" id="card1" onclick="selectTask(1)">
+          <h3>① PACKER Profile 컬럼 추가</h3>
+          <p>leenai_packerprofile 테이블에 상세 연락처 컬럼 일괄 추가</p>
+          <div class="col-count">25개 컬럼 추가 예정</div>
+        </div>
+        <div class="table-card" id="card2" onclick="selectTask(2)">
+          <h3>② PACKER Contact 테이블 + 컬럼 생성</h3>
+          <p>leenai_packercontact 테이블 신규 생성 + 담당자 컬럼 추가</p>
+          <div class="col-count">테이블 생성 + 7개 컬럼</div>
+        </div>
+        <div class="table-card" id="card3" onclick="selectTask(3)">
+          <h3>③ 둘 다 실행 (권장)</h3>
+          <p>①②를 순서대로 한 번에 실행</p>
+          <div class="col-count">전체 자동 실행</div>
+        </div>
+        <div class="table-card" id="card4" onclick="selectTask(4)">
+          <h3>④ 기존 테이블 조회만</h3>
+          <p>현재 leenai_ 테이블 목록 확인 (생성 없음)</p>
+          <div class="col-count">확인 전용</div>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="previewCard">
+      <div class="card-title">추가될 컬럼 목록 미리보기</div>
+      <div id="previewContent"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">실행</div>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;">
+        <button class="btn btn-primary" id="runBtn" onclick="runTask()">▶ 실행 시작</button>
+        <button class="btn btn-secondary" onclick="clearLog()">로그 지우기</button>
+        <span id="taskLabel" style="font-size:12px;color:var(--text-sub);">작업 ①이 선택됨</span>
+      </div>
+      <div class="progress-wrap" id="progressWrap" style="display:none;">
+        <div class="progress-label">
+          <span id="progressText">준비 중...</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+      <div class="log-box" id="logBox">
+        <div class="log-line"><span class="log-time">--:--:--</span><span class="log-info">LEENAI Column Builder v1.0 준비 완료. 작업을 선택하고 실행해주세요.</span></div>
+      </div>
+    </div>
+  </div>
+</main>
+<footer>✦ Powered by LEENAI Automation System &nbsp;|&nbsp; SYS-M-01 Column Builder v1.0</footer>
+<script>
+const CFG = {
+  CLIENT_ID:     'f071a165-5e9b-44bf-b6a1-baba654524db',
+  TENANT_ID:     'a56988ff-c2b8-4df8-9727-889ad4205198',
+  DATAVERSE_URL: 'https://orgde512c6f.crm7.dynamics.com',
+  REDIRECT_URI:  'https://mhlee205.github.io/MASTER_DB/',
+  SCOPE:         'https://orgde512c6f.crm7.dynamics.com/user_impersonation offline_access',
+};
+const PROFILE_COLS = [
+  { schema:'leenai_packercode',      label:'PACKER Code',         type:'String',  maxLen:10,  required:true  },
+  { schema:'leenai_companynameen',   label:'Company Name (EN)',   type:'String',  maxLen:100 },
+  { schema:'leenai_postalcode',      label:'Postal Code',         type:'String',  maxLen:10  },
+  { schema:'leenai_addressjp',       label:'Address (JP)',        type:'String',  maxLen:200 },
+  { schema:'leenai_telmain',         label:'Tel Main',            type:'String',  maxLen:20  },
+  { schema:'leenai_fax',             label:'FAX',                 type:'String',  maxLen:20  },
+  { schema:'leenai_oldid',           label:'Old ID',              type:'String',  maxLen:10  },
+  { schema:'leenai_ceotitle',        label:'CEO Title',           type:'String',  maxLen:50  },
+  { schema:'leenai_ceoname',         label:'CEO Name',            type:'String',  maxLen:50  },
+  { schema:'leenai_email1',          label:'Email 1 (To)',        type:'Email'               },
+  { schema:'leenai_email2',          label:'Email 2 (To)',        type:'Email'               },
+  { schema:'leenai_email3',          label:'Email 3 (CC)',        type:'Email'               },
+  { schema:'leenai_email4',          label:'Email 4 (CC)',        type:'Email'               },
+  { schema:'leenai_email5',          label:'Email 5 (CC)',        type:'Email'               },
+  { schema:'leenai_email6',          label:'Email 6 (CC)',        type:'Email'               },
+  { schema:'leenai_email7',          label:'Email 7 (CC)',        type:'Email'               },
+  { schema:'leenai_paymentterms',    label:'Payment Terms',       type:'String',  maxLen:100 },
+  { schema:'leenai_paymentterms2',   label:'Payment Terms 2',     type:'String',  maxLen:100 },
+  { schema:'leenai_paymentday',      label:'Payment Day',         type:'String',  maxLen:20  },
+  { schema:'leenai_importance', label:'Importance', type:'Choice', options:[{val:100000000,label:'High (上)'},{val:100000001,label:'Medium (中)'},{val:100000002,label:'Low (下)'}] },
+  { schema:'leenai_advancetransfer', label:'Advance Transfer', type:'Choice', options:[{val:100000000,label:'先方 (Buyer)'},{val:100000001,label:'リニア (LEENAI)'}] },
+  { schema:'leenai_balancetransfer', label:'Balance Transfer', type:'Choice', options:[{val:100000000,label:'先方 (Buyer)'},{val:100000001,label:'リニア (LEENAI)'}] },
+  { schema:'leenai_receiptmethod', label:'Receipt Method', type:'Choice', options:[{val:100000000,label:'郵送 (Mail)'},{val:100000001,label:'FAX'},{val:100000002,label:'Email (メール)'}] },
+  { schema:'leenai_photosendpattern', label:'Photo Send Pattern', type:'Choice', options:[{val:100000000,label:'Direct Email (メール直送)'},{val:100000001,label:'HENNGE'},{val:100000002,label:'firestorage'},{val:100000003,label:'Other (その他)'}] },
+  { schema:'leenai_remarks', label:'Remarks', type:'Memo', maxLen:2000 },
+];
+const CONTACT_COLS = [
+  { schema:'leenai_sortorder',      label:'Sort Order',      type:'Integer', minVal:1, maxVal:99 },
+  { schema:'leenai_contacttitle',   label:'Contact Title',   type:'String',  maxLen:50 },
+  { schema:'leenai_contactemail',   label:'Contact Email',   type:'Email'              },
+  { schema:'leenai_contacttel',     label:'Contact Tel',     type:'String',  maxLen:20 },
+  { schema:'leenai_mailrole', label:'Mail Role', type:'Choice', options:[{val:100000000,label:'To (宛先)'},{val:100000001,label:'CC'},{val:100000002,label:'Exclude (対象外)'}] },
+  { schema:'leenai_isprimary',      label:'Is Primary',      type:'Boolean' },
+  { schema:'leenai_remarks',        label:'Remarks',         type:'Memo',    maxLen:2000 },
+];
+let accessToken = null;
+let selectedTask = 1;
+
+function generateCodeVerifier() {
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+async function generateCodeChallenge(verifier) {
+  const enc = new TextEncoder().encode(verifier);
+  const hash = await crypto.subtle.digest('SHA-256', enc);
+  return btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+async function startLogin() {
+  const verifier = generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
+  const state = Math.random().toString(36).slice(2);
+  sessionStorage.setItem('pkce_verifier', verifier);
+  sessionStorage.setItem('pkce_state', state);
+  const params = new URLSearchParams({ client_id:CFG.CLIENT_ID, response_type:'code', redirect_uri:CFG.REDIRECT_URI, scope:CFG.SCOPE, code_challenge:challenge, code_challenge_method:'S256', state });
+  location.href = `https://login.microsoftonline.com/${CFG.TENANT_ID}/oauth2/v2.0/authorize?${params}`;
+}
+async function exchangeToken(code) {
+  const body = new URLSearchParams({ grant_type:'authorization_code', client_id:CFG.CLIENT_ID, code, redirect_uri:CFG.REDIRECT_URI, code_verifier:sessionStorage.getItem('pkce_verifier') });
+  const res = await fetch(`https://login.microsoftonline.com/${CFG.TENANT_ID}/oauth2/v2.0/token`, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body });
+  if (!res.ok) throw new Error('Token exchange failed: ' + await res.text());
+  return res.json();
+}
+async function handleCallback() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if (!code) return false;
+  if (params.get('state') !== sessionStorage.getItem('pkce_state')) throw new Error('State mismatch');
+  const tokens = await exchangeToken(code);
+  accessToken = tokens.access_token;
+  sessionStorage.setItem('leenai_access_token', accessToken);
+  history.replaceState({}, '', location.pathname);
+  return true;
+}
+async function dvGet(path) {
+  const res = await fetch(`${CFG.DATAVERSE_URL}/api/data/v9.2/${path}`, { headers:{ 'Authorization':`Bearer ${accessToken}`, 'OData-MaxVersion':'4.0', 'OData-Version':'4.0', 'Accept':'application/json' } });
+  if (!res.ok) throw new Error(`GET ${path} → ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+async function dvPost(path, body) {
+  const res = await fetch(`${CFG.DATAVERSE_URL}/api/data/v9.2/${path}`, { method:'POST', headers:{ 'Authorization':`Bearer ${accessToken}`, 'OData-MaxVersion':'4.0', 'OData-Version':'4.0', 'Accept':'application/json', 'Content-Type':'application/json' }, body:JSON.stringify(body) });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`POST ${path} → ${res.status}: ${text}`);
+  return text ? JSON.parse(text) : {};
+}
+function makeLabel(label) {
+  return { '@odata.type':'Microsoft.Dynamics.CRM.Label', LocalizedLabels:[{'@odata.type':'Microsoft.Dynamics.CRM.LocalizedLabel', Label:label, LanguageCode:1033}] };
+}
+function buildAttrPayload(col) {
+  const base = { SchemaName:col.schema, DisplayName:makeLabel(col.label), RequiredLevel:{Value:col.required?'ApplicationRequired':'None'} };
+  if (col.type==='String'||col.type==='Email') return { '@odata.type':'Microsoft.Dynamics.CRM.StringAttributeMetadata', ...base, MaxLength:col.maxLen||100, FormatName:{Value:col.type==='Email'?'Email':'Text'} };
+  if (col.type==='Memo') return { '@odata.type':'Microsoft.Dynamics.CRM.MemoAttributeMetadata', ...base, MaxLength:col.maxLen||2000, Format:'TextArea' };
+  if (col.type==='Choice') return { '@odata.type':'Microsoft.Dynamics.CRM.PicklistAttributeMetadata', ...base, OptionSet:{ '@odata.type':'Microsoft.Dynamics.CRM.OptionSetMetadata', IsGlobal:false, OptionSetType:'Picklist', Options:col.options.map(o=>({Value:o.val, Label:makeLabel(o.label)})) } };
+  if (col.type==='Boolean') return { '@odata.type':'Microsoft.Dynamics.CRM.BooleanAttributeMetadata', ...base, DefaultValue:false, OptionSet:{ '@odata.type':'Microsoft.Dynamics.CRM.BooleanOptionSetMetadata', TrueOption:{Value:1,Label:makeLabel('Yes')}, FalseOption:{Value:0,Label:makeLabel('No')} } };
+  if (col.type==='Integer') return { '@odata.type':'Microsoft.Dynamics.CRM.IntegerAttributeMetadata', ...base, MinValue:col.minVal||0, MaxValue:col.maxVal||100, Format:'None' };
+  throw new Error('Unknown type: '+col.type);
+}
+async function createContactTable() {
+  log('info','leenai_packercontact 테이블 생성 중...');
+  await dvPost('EntityDefinitions', {
+    '@odata.type':'Microsoft.Dynamics.CRM.EntityMetadata',
+    SchemaName:'leenai_packercontact',
+    DisplayName:makeLabel('PACKER Contact'),
+    DisplayCollectionName:makeLabel('PACKER Contacts'),
+    Description:makeLabel('PACKER contact person management (1:N)'),
+    OwnershipType:'UserOwned', HasActivities:false, HasNotes:false, IsActivity:false,
+    PrimaryNameAttribute:'leenai_contactname',
+    Attributes:[{ '@odata.type':'Microsoft.Dynamics.CRM.StringAttributeMetadata', IsPrimaryName:true, SchemaName:'leenai_contactname', RequiredLevel:{Value:'ApplicationRequired'}, MaxLength:50, FormatName:{Value:'Text'}, DisplayName:makeLabel('Contact Name') }]
+  });
+  log('ok','leenai_packercontact 테이블 생성 완료!');
+}
+async function addColumns(tableLogical, cols, startPct, endPct) {
+  for (let i=0; i<cols.length; i++) {
+    const col = cols[i];
+    setProgress(Math.round(startPct+((i+1)/cols.length)*(endPct-startPct)), `${col.label} (${i+1}/${cols.length})`);
+    try {
+      await dvPost(`EntityDefinitions(LogicalName='${tableLogical}')/Attributes`, buildAttrPayload(col));
+      log('ok', `  ✓ [${i+1}/${cols.length}] ${col.label}`);
+    } catch(e) {
+      if (e.message.includes('0x80040217')||e.message.includes('already exists')) log('warn',`  ↩ [${i+1}/${cols.length}] ${col.label} — 이미 존재 (스킵)`);
+      else log('err',`  ✗ [${i+1}/${cols.length}] ${col.label} — ${e.message}`);
+    }
+    await new Promise(r=>setTimeout(r,400));
+  }
+}
+async function runTask() {
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('progressWrap').style.display = 'block';
+  setProgress(0,'시작...');
+  try {
+    if (selectedTask===4) {
+      log('info','leenai_ 테이블 목록 조회 중...');
+      const data = await dvGet("EntityDefinitions?$filter=startswith(SchemaName,'leenai_')&$select=SchemaName,LogicalName,DisplayName");
+      data.value.length===0 ? log('warn','현재 leenai_ 테이블이 없습니다.') : data.value.forEach(e=>log('ok',`  📋 ${e.SchemaName} (${e.LogicalName})`));
+      setProgress(100,'조회 완료'); log('info',`총 ${data.value.length}개`);
+      document.getElementById('runBtn').disabled=false; return;
+    }
+    log('info','leenai_packerprofile 테이블 확인 중...');
+    let profileLogical = 'leenai_packerprofile';
+    try {
+      const check = await dvGet("EntityDefinitions?$filter=startswith(SchemaName,'leenai_')&$select=SchemaName,LogicalName");
+      const found = check.value.find(e=>e.SchemaName.toLowerCase().includes('packerprofile'));
+      if (found) { profileLogical=found.LogicalName; log('ok',`PACKER Profile 확인: ${profileLogical}`); }
+      else log('warn',`기본값 사용: ${profileLogical}`);
+    } catch(e) { log('warn','테이블 조회 실패, 기본값 사용'); }
+
+    if (selectedTask===1||selectedTask===3) {
+      log('info','━━━ [①] PACKER Profile 컬럼 추가 ━━━');
+      await addColumns(profileLogical, PROFILE_COLS, 0, selectedTask===3?50:95);
+      log('ok','✅ PACKER Profile 완료!');
+    }
+    if (selectedTask===2||selectedTask===3) {
+      log('info','━━━ [②] PACKER Contact 테이블 생성 ━━━');
+      setProgress(selectedTask===3?52:5,'테이블 생성 중...');
+      const existing = await dvGet("EntityDefinitions?$filter=SchemaName eq 'leenai_packercontact'&$select=SchemaName,LogicalName");
+      if (existing.value.length===0) { await createContactTable(); await new Promise(r=>setTimeout(r,2000)); }
+      else log('warn','leenai_packercontact 이미 존재 — 컬럼 추가만 진행');
+      const contactLogical = existing.value[0]?.LogicalName||'leenai_packercontact';
+      await addColumns(contactLogical, CONTACT_COLS, selectedTask===3?55:10, 95);
+      log('ok','✅ PACKER Contact 완료!');
+    }
+    setProgress(100,'전체 완료!');
+    log('ok','🎉 모든 작업 완료! make.powerapps.com에서 확인해주세요.');
+  } catch(e) { log('err','오류: '+e.message); setProgress(0,'오류 발생'); }
+  document.getElementById('runBtn').disabled=false;
+}
+function log(type,msg) {
+  const box=document.getElementById('logBox');
+  const line=document.createElement('div'); line.className='log-line';
+  line.innerHTML=`<span class="log-time">${new Date().toTimeString().slice(0,8)}</span><span class="log-${type}">${String(msg).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`;
+  box.appendChild(line); box.scrollTop=box.scrollHeight;
+}
+function clearLog() { document.getElementById('logBox').innerHTML=''; }
+function setProgress(pct,text) {
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('progressPct').textContent=pct+'%';
+  document.getElementById('progressText').textContent=text;
+}
+function selectTask(n) {
+  selectedTask=n;
+  [1,2,3,4].forEach(i=>document.getElementById('card'+i).classList.toggle('selected',i===n));
+  document.getElementById('taskLabel').textContent={1:'작업 ①',2:'작업 ②',3:'작업 ③ (전체)',4:'조회 전용'}[n]+' 선택됨';
+  renderPreview(n);
+}
+function renderPreview(task) {
+  const box=document.getElementById('previewContent');
+  const tc={String:'tag-text',Email:'tag-email',Memo:'tag-memo',Choice:'tag-choice',Boolean:'tag-bool',Integer:'tag-int'};
+  if(task===4){box.innerHTML='<p style="color:var(--text-sub);font-size:13px;">조회 모드</p>';return;}
+  let html='';
+  if(task===1||task===3){html+=`<p style="font-size:12px;color:var(--text-sub);margin-bottom:8px;">leenai_packerprofile — ${PROFILE_COLS.length}개</p>`;html+=PROFILE_COLS.map(c=>`<span class="tag ${tc[c.type]||'tag-text'}">${c.label}</span>`).join('');}
+  if(task===2||task===3){html+=`<p style="font-size:12px;color:var(--text-sub);margin:12px 0 8px;">leenai_packercontact — ${CONTACT_COLS.length}개 + PrimaryName</p>`;html+=CONTACT_COLS.map(c=>`<span class="tag ${tc[c.type]||'tag-text'}">${c.label}</span>`).join('');}
+  box.innerHTML=html;
+}
+async function init() {
+  const saved=sessionStorage.getItem('leenai_access_token');
+  if(saved) accessToken=saved;
+  if(location.search.includes('code=')) { try { await handleCallback(); } catch(e) { alert('인증 오류: '+e.message); return; } }
+  if(!accessToken) { document.getElementById('loginSection').style.display='block'; document.getElementById('mainSection').style.display='none'; return; }
+  document.getElementById('loginSection').style.display='none';
+  document.getElementById('mainSection').style.display='block';
+  try { const me=await fetch('https://graph.microsoft.com/v1.0/me',{headers:{'Authorization':'Bearer '+accessToken}}).then(r=>r.json()); const b=document.getElementById('userBadge'); b.textContent='👤 '+(me.displayName||me.userPrincipalName); b.style.display='block'; } catch(_){}
+  try { await dvGet('EntityDefinitions?$top=1&$select=SchemaName'); document.getElementById('connStatus').textContent=`Dataverse 접속 완료 — ${CFG.DATAVERSE_URL}`; } catch(e) { document.getElementById('connDot').className='status-dot warn'; document.getElementById('connStatus').textContent='Dataverse 접속 실패: '+e.message; }
+  renderPreview(1);
+}
+init();
+</script>
+</body>
+</html>
