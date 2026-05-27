@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LEENAI PACKER Master DB v1.0</title>
+<title>LEENAI PACKER Master DB v1.1</title>
 <style>
 :root {
   --bg:#0d1117; --surface:#161b22; --surface2:#1c2128; --surface3:#21262d;
@@ -18,7 +18,7 @@
   --header-h:42px; --toolbar-h:52px; --row-h:32px;
   --col-name:200px; --col-id:90px; --col-tel:130px; --col-fax:130px;
   --col-mail:200px; --col-pay:160px; --col-addr:220px; --col-sm:80px;
-  --col-xs:60px; --col-md:120px;
+  --col-xs:60px; --col-md:120px; --col-contact:140px;
 }
 * { box-sizing:border-box; margin:0; padding:0; }
 body { background:var(--bg); color:var(--text); font-family:'Consolas','Cascadia Code','Menlo',monospace; font-size:12px; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
@@ -70,7 +70,8 @@ body { background:var(--bg); color:var(--text); font-family:'Consolas','Cascadia
 .grid-wrap { flex:1; overflow:hidden; display:flex; flex-direction:column; position:relative; }
 
 /* ── GRID HEADER ── */
-.grid-header { background:var(--surface); border-bottom:2px solid var(--border); height:var(--header-h); display:flex; align-items:stretch; flex-shrink:0; overflow:hidden; position:relative; z-index:10; }
+.grid-header { background:var(--surface); border-bottom:2px solid var(--border); height:var(--header-h); display:flex; align-items:stretch; flex-shrink:0; overflow-x:scroll; overflow-y:hidden; position:relative; z-index:10; scrollbar-width:none; }
+.grid-header::-webkit-scrollbar { display:none; }
 .gh-scroll { display:flex; align-items:stretch; overflow:hidden; }
 .col-h { display:flex; align-items:center; padding:0 8px; font-size:11px; font-weight:600; color:var(--text-sub); text-transform:uppercase; letter-spacing:.06em; border-right:1px solid var(--border); flex-shrink:0; cursor:pointer; user-select:none; white-space:nowrap; gap:4px; font-family:sans-serif; }
 .col-h:hover { background:var(--surface2); color:var(--text); }
@@ -166,6 +167,7 @@ body { background:var(--bg); color:var(--text); font-family:'Consolas','Cascadia
 .w-sm { width:var(--col-sm); }
 .w-xs { width:var(--col-xs); }
 .w-md { width:var(--col-md); }
+.w-contact { width:var(--col-contact); }
 
 /* ── SCROLLBAR SYNC ── */
 .header-scroll-sync { overflow:hidden; }
@@ -191,7 +193,7 @@ body { background:var(--bg); color:var(--text); font-family:'Consolas','Cascadia
     <div class="conn-dot" id="connDot"></div>
     <div class="conn-label" id="connLabel">연결 중...</div>
     <div id="userLabel"></div>
-    <div class="ver-badge">v1.0</div>
+    <div class="ver-badge">v1.1</div>
   </div>
 </header>
 
@@ -245,6 +247,10 @@ body { background:var(--bg); color:var(--text); font-family:'Consolas','Cascadia
       <div class="col-h w-name" onclick="sortBy('leenai_column_a98521e9')">社名 <span id="sort_leenai_column_a98521e9"></span></div>
       <div class="col-h w-id" onclick="sortBy('leenai_packercode')">PACKER ID <span id="sort_leenai_packercode"></span></div>
       <div class="col-h w-sm" onclick="sortBy('leenai_importance')">重要度 <span id="sort_leenai_importance"></span></div>
+      <div class="col-h w-contact">担当者名</div>
+      <div class="col-h w-sm">役職</div>
+      <div class="col-h w-contact" onclick="sortBy('leenai_ceoname')">代表者名 <span id="sort_leenai_ceoname"></span></div>
+      <div class="col-h w-sm">代表者役職</div>
       <div class="col-h w-tel" onclick="sortBy('leenai_telmain')">電話番号 <span id="sort_leenai_telmain"></span></div>
       <div class="col-h w-fax">FAX番号</div>
       <div class="col-h w-mail">MAIL1（宛先）</div>
@@ -259,7 +265,7 @@ body { background:var(--bg); color:var(--text); font-family:'Consolas','Cascadia
     </div>
 
     <!-- 바디 -->
-    <div class="grid-body" id="gridBody" onscroll="syncHeaderScroll(this)">
+    <div class="grid-body" id="gridBody" onscroll="document.getElementById('gridHeader').scrollLeft=this.scrollLeft">
       <div class="empty-state" id="emptyState" style="display:none;">
         <div class="icon">📭</div>
         <p>데이터 없음</p>
@@ -315,7 +321,8 @@ const CFG = {
   SCOPE: 'https://orgde512c6f.crm7.dynamics.com/user_impersonation offline_access',
   PRIMARY: 'leenai_column_a98521e9',
   TABLE: 'leenai_packerprofiles',
-  SELECT: 'leenai_packerprofileid,leenai_column_a98521e9,leenai_packercode,leenai_telmain,leenai_fax,leenai_email1,leenai_email2,leenai_email3,leenai_email4,leenai_email5,leenai_email6,leenai_email7,leenai_paymentterms,leenai_paymentterms2,leenai_paymentday,leenai_importance,leenai_receiptmethod,leenai_advancetransfer,leenai_balancetransfer,leenai_addressjp,leenai_postalcode,leenai_oldid,leenai_ceotitle,leenai_ceoname,leenai_remarks'
+  SELECT: 'leenai_packerprofileid,leenai_column_a98521e9,leenai_packercode,leenai_telmain,leenai_fax,leenai_email1,leenai_email2,leenai_email3,leenai_email4,leenai_email5,leenai_email6,leenai_email7,leenai_paymentterms,leenai_paymentterms2,leenai_paymentday,leenai_importance,leenai_receiptmethod,leenai_advancetransfer,leenai_balancetransfer,leenai_addressjp,leenai_postalcode,leenai_oldid,leenai_ceotitle,leenai_ceoname,leenai_remarks',
+  EXPAND: 'leenai_packercontact_PACKERProfile_leenai_packerprofile($select=leenai_contactname,leenai_contacttitle,leenai_isprimary,leenai_sortorder;$orderby=leenai_sortorder asc)'
 };
 
 const IMP_MAP = {100000000:'上',100000001:'中',100000002:'下'};
@@ -379,7 +386,7 @@ async function dvDelete(path){
 async function loadData(){
   setSaving(true);
   try {
-    let all = [], next = `${CFG.TABLE}?$select=${CFG.SELECT}&$orderby=leenai_column_a98521e9 asc&$top=500`;
+    let all = [], next = `${CFG.TABLE}?$select=${CFG.SELECT}&$expand=${CFG.EXPAND}&$orderby=leenai_column_a98521e9 asc&$top=500`;
     while(next){
       const d = await dvGet(next);
       all = all.concat(d.value || []);
@@ -452,6 +459,11 @@ function makeRow(row, idx){
   const impLbl = IMP_MAP[d.leenai_importance] || '';
   const impCls = d.leenai_importance === 100000000 ? 'high' : d.leenai_importance === 100000001 ? 'mid' : 'low';
   const recvLbl = RECV_MAP[d.leenai_receiptmethod] || '';
+  // 담당자: isPrimary=true 우선, 없으면 첫번째
+  const contacts = d['leenai_packercontact_PACKERProfile_leenai_packerprofile'] || [];
+  const mainContact = contacts.find(c => c.leenai_isprimary) || contacts[0] || null;
+  const contactName = mainContact ? (mainContact.leenai_contactname || '') : '';
+  const contactTitle = mainContact ? (mainContact.leenai_contacttitle || '') : '';
 
   div.innerHTML = `
     <div class="cell num">${idx+1}</div>
@@ -459,6 +471,10 @@ function makeRow(row, idx){
     <div class="cell editable w-name" data-id="${id}" data-field="${CFG.PRIMARY}" onclick="activateCell(this)"><div class="cell-val${!d[CFG.PRIMARY]?' placeholder':''}">${esc(d[CFG.PRIMARY]) || '（미입력）'}</div></div>
     <div class="cell editable w-id" data-id="${id}" data-field="leenai_packercode" onclick="activateCell(this)"><div class="cell-val">${esc(d.leenai_packercode)||''}</div></div>
     <div class="cell editable w-sm" data-id="${id}" data-field="leenai_importance" onclick="activateCell(this)"><div class="cell-val">${impLbl ? `<span class="imp ${impCls}">${impLbl}</span>` : ''}</div></div>
+    <div class="cell w-contact"><div class="cell-val">${esc(contactName)}</div></div>
+    <div class="cell w-sm"><div class="cell-val" style="color:var(--text-sub);font-size:11px;">${esc(contactTitle)}</div></div>
+    <div class="cell editable w-contact" data-id="${id}" data-field="leenai_ceoname" onclick="activateCell(this)"><div class="cell-val">${esc(d.leenai_ceoname)||''}</div></div>
+    <div class="cell editable w-sm" data-id="${id}" data-field="leenai_ceotitle" onclick="activateCell(this)"><div class="cell-val" style="color:var(--text-sub);font-size:11px;">${esc(d.leenai_ceotitle)||''}</div></div>
     <div class="cell editable w-tel" data-id="${id}" data-field="leenai_telmain" onclick="activateCell(this)"><div class="cell-val">${esc(d.leenai_telmain)||''}</div></div>
     <div class="cell editable w-fax" data-id="${id}" data-field="leenai_fax" onclick="activateCell(this)"><div class="cell-val">${esc(d.leenai_fax)||''}</div></div>
     <div class="cell editable w-mail" data-id="${id}" data-field="leenai_email1" onclick="activateCell(this)"><div class="cell-val">${esc(d.leenai_email1)||''}</div></div>
