@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LEENAI Master DB — Data Uploader v1.0</title>
+<title>LEENAI Master DB — Data Uploader v1.1</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;--accent:#00c6a2;--accent2:#0078d4;--text:#e6edf3;--text-sub:#8b949e;--ok:#3fb950;--warn:#d29922;--err:#f85149;--radius:8px;}
@@ -38,7 +38,6 @@
   .preview-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;}
   .preview-table th{background:var(--surface2);padding:8px 12px;text-align:left;font-weight:600;color:var(--text-sub);border-bottom:1px solid var(--border);}
   .preview-table td{padding:6px 12px;border-bottom:1px solid rgba(48,54,61,.5);color:var(--text);}
-  .preview-table tr:hover td{background:rgba(0,198,162,.04);}
   .badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:600;}
   .badge-high{background:rgba(63,185,80,.2);color:var(--ok);}
   .badge-mid{background:rgba(210,153,34,.2);color:var(--warn);}
@@ -60,7 +59,7 @@
     <div class="logo-text"><h1>LEENAI Master DB — Data Uploader</h1><span>購買先住所録 → Dataverse 일괄 업로드</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
-    <span class="version-badge">v1.0</span>
+    <span class="version-badge">v1.1</span>
     <span id="userBadge" style="font-size:12px;color:var(--text-sub);display:none;"></span>
   </div>
 </header>
@@ -110,7 +109,7 @@
     </div>
   </div>
 </main>
-<footer>✦ Powered by LEENAI Automation System &nbsp;|&nbsp; SYS-M-01 Data Uploader v1.0</footer>
+<footer>✦ Powered by LEENAI Automation System &nbsp;|&nbsp; SYS-M-01 Data Uploader v1.1</footer>
 <script>
 const CFG={CLIENT_ID:'f071a165-5e9b-44bf-b6a1-baba654524db',TENANT_ID:'a56988ff-c2b8-4df8-9727-889ad4205198',DATAVERSE_URL:'https://orgde512c6f.crm7.dynamics.com',REDIRECT_URI:'https://mhlee205.github.io/MASTER_DB/uploader.html',SCOPE:'https://orgde512c6f.crm7.dynamics.com/user_impersonation offline_access',PRIMARY_COL:'leenai_column_a98521e9'};
 let accessToken=null,parsedData=[];
@@ -122,7 +121,7 @@ async function handleCallback(){const p=new URLSearchParams(location.search),cod
 async function dvPost(path,body){const r=await fetch(`${CFG.DATAVERSE_URL}/api/data/v9.2/${path}`,{method:'POST',headers:{'Authorization':`Bearer ${accessToken}`,'OData-MaxVersion':'4.0','OData-Version':'4.0','Accept':'application/json','Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(body)});const t=await r.text();if(!r.ok)throw new Error(`${r.status}: ${t}`);return t?JSON.parse(t):{};}
 async function dvGet(path){const r=await fetch(`${CFG.DATAVERSE_URL}/api/data/v9.2/${path}`,{headers:{'Authorization':`Bearer ${accessToken}`,'OData-MaxVersion':'4.0','Accept':'application/json'}});if(!r.ok)throw new Error(r.status);return r.json();}
 function handleDrop(e){e.preventDefault();document.getElementById('uploadZone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)handleFile(f);}
-function handleFile(file){if(!file)return;const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});const sheetName=wb.SheetNames.find(s=>s==='Address')||wb.SheetNames[0];const ws=wb.Sheets[sheetName];const rows=XLSX.utils.sheet_to_json(ws,{defval:''});parsedData=rows;showPreview(rows);log('ok',`파일 파싱 완료: ${rows.length}건 (시트: ${sheetName})`);}catch(err){log('err','파일 파싱 오류: '+err.message);}};reader.readAsArrayBuffer(file);}
+function handleFile(file){if(!file)return;const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});const sheetName=wb.SheetNames.find(s=>s==='Address')||wb.SheetNames[0];const ws=wb.Sheets[sheetName];const rows=XLSX.utils.sheet_to_json(ws,{defval:''});parsedData=rows;showPreview(rows);log('ok',`파일 파싱 완료: ${rows.length}건`);}catch(err){log('err','파일 파싱 오류: '+err.message);}};reader.readAsArrayBuffer(file);}
 function showPreview(rows){document.getElementById('previewCard').style.display='block';document.getElementById('uploadCard').style.display='block';const withP=rows.filter(r=>r['PACKER_ID']&&String(r['PACKER_ID']).trim()).length;document.getElementById('totalRows').textContent=rows.length;document.getElementById('withPacker').textContent=withP;document.getElementById('withoutPacker').textContent=rows.length-withP;const table=document.getElementById('previewTable');table.innerHTML=`<tr><th>社名</th><th>PACKER_ID</th><th>電話番号</th><th>MAIL1</th><th>担当者</th><th>重要度</th></tr>`;rows.slice(0,10).forEach(r=>{const imp=r['重要度']||'';const badge=imp==='上'?'badge-high':imp==='中'?'badge-mid':'badge-low';table.innerHTML+=`<tr><td>${r['社名']||''}</td><td>${r['PACKER_ID']||'-'}</td><td>${r['電話番号']||''}</td><td>${r['MAIL1(宛先)']||''}</td><td>${r['担当者']||''}</td><td><span class="badge ${badge}">${imp}</span></td></tr>`;});if(rows.length>10)table.innerHTML+=`<tr><td colspan="6" style="text-align:center;color:var(--text-sub);padding:8px;">... 외 ${rows.length-10}건</td></tr>`;}
 function mapImportance(v){const s=String(v||'').trim();if(s==='上')return 100000000;if(s==='中')return 100000001;if(s==='下')return 100000002;return null;}
 function mapReceiptMethod(v){const s=String(v||'').trim();if(s==='郵送')return 100000000;if(s==='FAX')return 100000001;if(s.includes('メール'))return 100000002;return null;}
@@ -165,7 +164,7 @@ async function startUpload(){
       const created=await dvPost('leenai_packerprofiles',body);
       const profileId=created?.leenai_packerprofileid;
       if(profileId&&str(r['担当者'])){
-        const cb={'leenai_contactname':str(r['担当者']),'leenai_sortorder':1,'leenai_isprimary':true,'leenai_mailrole':100000000,[`leenai_packerprofileid@odata.bind`]:`/leenai_packerprofiles(${profileId})`};
+        const cb={'leenai_contactname':str(r['担当者']),'leenai_sortorder':1,'leenai_isprimary':true,'leenai_mailrole':100000000,'leenai_packerprofile@odata.bind':`/leenai_packerprofiles(${profileId})`};
         if(str(r['役職']))cb['leenai_contacttitle']=str(r['役職']);
         await dvPost('leenai_packercontacts',cb);
       }
