@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LEENAI B-05 Dataverse テーブル作成ツール v1.0</title>
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;--accent:#00c6a2;--text:#e6edf3;--text-sub:#8b949e;--ok:#3fb950;--warn:#d29922;--err:#f85149;--radius:8px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-mark{width:34px;height:34px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#000;}
+.logo-text h1{font-size:15px;font-weight:700;}
+.logo-text span{font-size:11px;color:var(--text-sub);}
+.ver-badge{background:var(--surface2);border:1px solid var(--border);padding:3px 10px;border-radius:20px;font-size:11px;color:var(--text-sub);}
+main{max-width:860px;margin:0 auto;padding:28px 20px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:18px;}
+.card-title{font-size:13px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.card-title::before{content:'';width:3px;height:13px;background:var(--accent);border-radius:2px;}
+.btn{padding:9px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:8px;}
+.btn-primary{background:var(--accent);color:#000;} .btn-primary:hover{filter:brightness(1.1);}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);} .btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:#7f1d1d;color:#fca5a5;border:1px solid #991b1b;} .btn-danger:hover{background:#991b1b;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+.status-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--surface2);}
+.status-chip .dot{width:7px;height:7px;border-radius:50%;}
+.dot-ok{background:var(--ok);}  .dot-warn{background:var(--warn);}  .dot-err{background:var(--err);}  .dot-none{background:var(--text-sub);}
+.table-status{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
+.tbl-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;}
+.tbl-name{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px;}
+.tbl-info{font-size:11px;color:var(--text-sub);}
+.tbl-state{font-size:11px;font-weight:600;margin-top:6px;}
+.state-ok{color:var(--ok);} .state-miss{color:var(--err);} .state-warn{color:var(--warn);}
+.log-box{background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:14px;height:340px;overflow-y:auto;font-family:'Consolas',monospace;font-size:12px;line-height:1.8;}
+.log-line{display:flex;gap:10px;}
+.log-time{color:var(--text-sub);flex-shrink:0;font-size:11px;}
+.log-ok{color:var(--ok);} .log-err{color:var(--err);} .log-warn{color:var(--warn);} .log-info{color:var(--accent);} .log-plain{color:var(--text);}
+.progress-bar{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-top:10px;}
+.progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s ease;}
+footer{text-align:center;padding:20px;color:var(--text-sub);font-size:11px;border-top:1px solid var(--border);margin-top:8px;}
+.auth-ok{color:var(--ok);font-size:12px;}
+.section-label{font-size:11px;color:var(--text-sub);margin-bottom:8px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-mark">L</div>
+    <div class="logo-text">
+      <h1>B-05 Dataverse テーブル作成ツール</h1>
+      <span>leenai_b05_drayrule / drayschedule / ruleexception</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="authStatus" class="status-chip"><span class="dot dot-none"></span>未認証</span>
+    <span class="ver-badge">v1.0</span>
+  </div>
+</header>
+<main>
+
+  <!-- STEP 1: 認証 -->
+  <div class="card">
+    <div class="card-title">① Azure 認証</div>
+    <div class="section-label">LEENAI-ShippingSchedule アプリで Dataverse に接続します</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnAuth" onclick="startAuth()">🔑 Azure 認証</button>
+      <button class="btn btn-secondary" id="btnLogout" onclick="logout()" style="display:none">ログアウト</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: テーブル確認 -->
+  <div class="card">
+    <div class="card-title">② 既存テーブル確認</div>
+    <div class="table-status" id="tableStatus">
+      <div class="tbl-card">
+        <div class="tbl-name">leenai_b05_drayrule</div>
+        <div class="tbl-info">仮押さえルール</div>
+        <div class="tbl-state" id="state-rule">— 未確認</div>
+      </div>
+      <div class="tbl-card">
+        <div class="tbl-name">leenai_b05_drayschedule</div>
+        <div class="tbl-info">確定スケジュール</div>
+        <div class="tbl-state" id="state-sched">— 未確認</div>
+      </div>
+      <div class="tbl-card">
+        <div class="tbl-name">leenai_b05_ruleexception</div>
+        <div class="tbl-info">ルール例外</div>
+        <div class="tbl-state" id="state-exc">— 未確認</div>
+      </div>
+    </div>
+    <button class="btn btn-secondary" id="btnCheck" onclick="checkTables()" disabled>🔍 テーブル確認</button>
+  </div>
+
+  <!-- STEP 3: 作成 + 投入 -->
+  <div class="card">
+    <div class="card-title">③ テーブル作成 + データ投入</div>
+    <div class="section-label">未作成テーブルを作成、フィールド追加、初期データ6件を投入します</div>
+    <div class="btn-row" style="margin-bottom:12px;">
+      <button class="btn btn-primary" id="btnBuild" onclick="buildAll()" disabled>🚀 テーブル作成 + データ投入</button>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+
+  <!-- ログ -->
+  <div class="card">
+    <div class="card-title">実行ログ</div>
+    <div class="log-box" id="logBox"></div>
+    <div style="margin-top:8px;display:flex;justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="clearLog()" style="font-size:11px;padding:5px 12px;">ログ消去</button>
+    </div>
+  </div>
+
+</main>
+<footer>✦ Powered by LEENAI Automation System</footer>
+
+<script>
+const CFG = {
+  CLIENT_ID: 'f071a165-5e9b-44bf-b6a1-baba654524db',
+  TENANT_ID: 'a56988ff-c2b8-4df8-9727-889ad4205198',
+  DV_URL:    'https://orgde512c6f.crm7.dynamics.com',
+  REDIRECT:  location.href.split('?')[0].split('#')[0],
+  SOLUTION:  'LEENAIMasterDB',
+  SCOPE:     'https://orgde512c6f.crm7.dynamics.com/user_impersonation openid profile'
+};
+
+const TABLES = {
+  rule:  { logicalName:'leenai_b05_drayrule',      plural:'leenai_b05_drayrules',      display:'仮押さえルール',       stateId:'state-rule'  },
+  sched: { logicalName:'leenai_b05_drayschedule',  plural:'leenai_b05_drayschedules',  display:'確定スケジュール',     stateId:'state-sched' },
+  exc:   { logicalName:'leenai_b05_ruleexception', plural:'leenai_b05_ruleexceptions', display:'ルール例外',           stateId:'state-exc'   }
+};
+
+const FIELDS_RULE = [
+  { schema:'leenai_truck',     label:'ドレー業者', type:'String',   maxLen:100 },
+  { schema:'leenai_rule',      label:'ルール種別', type:'String',   maxLen:50  },
+  { schema:'leenai_timezone',  label:'時間帯',     type:'String',   maxLen:20  },
+  { schema:'leenai_hon',       label:'台数',       type:'Integer' },
+  { schema:'leenai_timerange', label:'時間範囲',   type:'String',   maxLen:50  },
+  { schema:'leenai_pol',       label:'POL',        type:'String',   maxLen:20  },
+  { schema:'leenai_active',    label:'有効',       type:'Boolean' }
+];
+
+const FIELDS_SCHED = [
+  { schema:'leenai_scheddate',    label:'スケジュール日', type:'DateTime' },
+  { schema:'leenai_truck',        label:'ドレー業者',     type:'String',  maxLen:100 },
+  { schema:'leenai_scheduletime', label:'到着時間',       type:'String',  maxLen:20  },
+  { schema:'leenai_packer',       label:'圧縮場',         type:'String',  maxLen:100 },
+  { schema:'leenai_cttype',       label:'CT種別',         type:'String',  maxLen:20  },
+  { schema:'leenai_hon',          label:'本数',           type:'Integer' },
+  { schema:'leenai_status',       label:'ステータス',     type:'String',  maxLen:50  },
+  { schema:'leenai_bkgno',        label:'BKG No.',        type:'String',  maxLen:100 },
+  { schema:'leenai_cycut',        label:'CY CUT',         type:'DateTime' },
+  { schema:'leenai_comment',      label:'備考',           type:'Memo',    maxLen:2000 },
+  { schema:'leenai_pol',          label:'POL',            type:'String',  maxLen:20  },
+  { schema:'leenai_createdby',    label:'作成者',         type:'String',  maxLen:200 }
+];
+
+const FIELDS_EXC = [
+  { schema:'leenai_ruleid',    label:'ルールID', type:'String',  maxLen:50  },
+  { schema:'leenai_exceptdate',label:'例外日',   type:'DateTime' },
+  { schema:'leenai_type',      label:'種別',     type:'String',  maxLen:50  },
+  { schema:'leenai_hon',       label:'台数',     type:'Integer' }
+];
+
+const INITIAL_DATA = [
+  { leenai_name:'池谷_weekday_TOKYO',    leenai_truck:'池谷', leenai_rule:'weekday',  leenai_timezone:null,  leenai_hon:1, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:true  },
+  { leenai_name:'池谷_saturday_TOKYO',   leenai_truck:'池谷', leenai_rule:'saturday', leenai_timezone:null,  leenai_hon:2, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:true  },
+  { leenai_name:'IT_weekday_TOKYO',      leenai_truck:'IT',   leenai_rule:'weekday',  leenai_timezone:null,  leenai_hon:1, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:true  },
+  { leenai_name:'国際_weekday_AM_TOKYO', leenai_truck:'国際', leenai_rule:'weekday',  leenai_timezone:'午前',leenai_hon:2, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:true  },
+  { leenai_name:'国際_weekday_PM_TOKYO', leenai_truck:'国際', leenai_rule:'weekday',  leenai_timezone:'午後',leenai_hon:2, leenai_timerange:null,           leenai_pol:'TOKYO', leenai_active:true  },
+  { leenai_name:'国際_saturday_TOKYO',   leenai_truck:'国際', leenai_rule:'saturday', leenai_timezone:null,  leenai_hon:2, leenai_timerange:null,           leenai_pol:'TOKYO', leenai_active:true  }
+];
+
+let TOKEN = null;
+
+/* ──────────── PKCE Auth ──────────── */
+function b64url(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }
+async function sha256(s){ return b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))); }
+
+async function startAuth(){
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
+  const challenge = await sha256(verifier);
+  sessionStorage.setItem('pkce_verifier', verifier);
+  const params = new URLSearchParams({
+    client_id: CFG.CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: CFG.REDIRECT,
+    scope: CFG.SCOPE,
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+    response_mode: 'query'
+  });
+  location.href = `https://login.microsoftonline.com/${CFG.TENANT_ID}/oauth2/v2.0/authorize?${params}`;
+}
+
+async function handleCallback(){
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code');
+  if(!code) return;
+  history.replaceState({}, '', CFG.REDIRECT);
+  const verifier = sessionStorage.getItem('pkce_verifier');
+  log('info', 'OAuth コールバック受信 — トークン取得中...');
+  try {
+    const body = new URLSearchParams({
+      client_id: CFG.CLIENT_ID,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: CFG.REDIRECT,
+      code_verifier: verifier,
+      scope: CFG.SCOPE
+    });
+    const r = await fetch(`https://login.microsoftonline.com/${CFG.TENANT_ID}/oauth2/v2.0/token`,
+      {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body});
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error_description || d.error);
+    TOKEN = d.access_token;
+    sessionStorage.setItem('b05_token', TOKEN);
+    sessionStorage.setItem('b05_expiry', Date.now() + (d.expires_in - 60)*1000);
+    onAuthOk();
+    log('ok', '認証成功');
+  } catch(e){ log('err', '認証エラー: ' + e.message); }
+}
+
+function onAuthOk(){
+  document.getElementById('authStatus').innerHTML = '<span class="dot dot-ok"></span><span class="auth-ok">認証済み</span>';
+  document.getElementById('btnAuth').style.display = 'none';
+  document.getElementById('btnLogout').style.display = '';
+  document.getElementById('btnCheck').disabled = false;
+  document.getElementById('btnBuild').disabled = false;
+}
+
+function logout(){
+  TOKEN = null;
+  sessionStorage.removeItem('b05_token');
+  sessionStorage.removeItem('b05_expiry');
+  document.getElementById('authStatus').innerHTML = '<span class="dot dot-none"></span>未認証';
+  document.getElementById('btnAuth').style.display = '';
+  document.getElementById('btnLogout').style.display = 'none';
+  document.getElementById('btnCheck').disabled = true;
+  document.getElementById('btnBuild').disabled = true;
+  log('info', 'ログアウトしました');
+}
+
+function getToken(){
+  if(TOKEN) return TOKEN;
+  const t = sessionStorage.getItem('b05_token');
+  const exp = parseInt(sessionStorage.getItem('b05_expiry')||'0');
+  if(t && Date.now() < exp){ TOKEN = t; onAuthOk(); return t; }
+  return null;
+}
+
+/* ──────────── Dataverse API ──────────── */
+async function dvGet(path){
+  const r = await fetch(`${CFG.DV_URL}/api/data/v9.2/${path}`,
+    { headers: { Authorization:`Bearer ${getToken()}`, Accept:'application/json', 'OData-MaxVersion':'4.0', 'OData-Version':'4.0' }});
+  if(!r.ok){ const e=await r.text(); throw Object.assign(new Error(e),{status:r.status}); }
+  return r.json();
+}
+
+async function dvPost(path, body, extra={}){
+  const r = await fetch(`${CFG.DV_URL}/api/data/v9.2/${path}`, {
+    method:'POST',
+    headers:{ Authorization:`Bearer ${getToken()}`, 'Content-Type':'application/json', Accept:'application/json', 'OData-MaxVersion':'4.0', 'OData-Version':'4.0', ...extra }
+  , body: JSON.stringify(body)});
+  if(!r.ok){ const e=await r.text(); throw Object.assign(new Error(e),{status:r.status}); }
+  const ct = r.headers.get('content-type')||'';
+  if(ct.includes('json') && r.status !== 204){ try{ return await r.json(); }catch(_){} }
+  return null;
+}
+
+/* ──────────── テーブル確認 ──────────── */
+async function checkTables(){
+  if(!getToken()){ log('err','先に認証してください'); return; }
+  log('info','── テーブル確認 開始 ──');
+  for(const [key, tbl] of Object.entries(TABLES)){
+    const el = document.getElementById(tbl.stateId);
+    try {
+      const r = await dvGet(`EntityDefinitions?$filter=LogicalName eq '${tbl.logicalName}'&$select=LogicalName,DisplayName`);
+      if(r.value && r.value.length > 0){
+        el.textContent = '✅ 存在';
+        el.className = 'tbl-state state-ok';
+        log('ok', `${tbl.logicalName}: 存在`);
+      } else {
+        el.textContent = '❌ 未作成';
+        el.className = 'tbl-state state-miss';
+        log('warn', `${tbl.logicalName}: 未作成`);
+      }
+    } catch(e){
+      el.textContent = '⚠ エラー';
+      el.className = 'tbl-state state-warn';
+      log('err', `${tbl.logicalName}: ${e.message.slice(0,80)}`);
+    }
+  }
+  log('info','── テーブル確認 完了 ──');
+}
+
+/* ──────────── メインビルド処理 ──────────── */
+async function buildAll(){
+  if(!getToken()){ log('err','先に認証してください'); return; }
+  document.getElementById('btnBuild').disabled = true;
+  setProgress(0);
+  log('info','════ テーブル作成 + データ投入 開始 ════');
+
+  try {
+    // Step A: leenai_b05_drayrule のフィールド確認 + 追加
+    log('info','[1/6] leenai_b05_drayrule フィールド確認...');
+    await ensureFields('leenai_b05_drayrule', FIELDS_RULE);
+    setProgress(15);
+
+    // Step B: leenai_b05_drayschedule 作成 + フィールド
+    log('info','[2/6] leenai_b05_drayschedule 確認...');
+    const schedExists = await tableExists('leenai_b05_drayschedule');
+    if(!schedExists){
+      log('info','  → テーブル作成中...');
+      await createTable('leenai_b05_drayschedule', 'leenai_b05_Drayschedule', '確定スケジュール');
+      log('ok','  → テーブル作成完了');
+    } else {
+      log('ok','  → 既存テーブル確認済み');
+    }
+    setProgress(30);
+    log('info','  フィールド追加...');
+    await ensureFields('leenai_b05_drayschedule', FIELDS_SCHED);
+    setProgress(50);
+
+    // Step C: leenai_b05_ruleexception 作成 + フィールド
+    log('info','[3/6] leenai_b05_ruleexception 確認...');
+    const excExists = await tableExists('leenai_b05_ruleexception');
+    if(!excExists){
+      log('info','  → テーブル作成中...');
+      await createTable('leenai_b05_ruleexception', 'leenai_b05_Ruleexception', 'ルール例外');
+      log('ok','  → テーブル作成完了');
+    } else {
+      log('ok','  → 既存テーブル確認済み');
+    }
+    setProgress(65);
+    log('info','  フィールド追加...');
+    await ensureFields('leenai_b05_ruleexception', FIELDS_EXC);
+    setProgress(75);
+
+    // Step D: Publish
+    log('info','[4/6] カスタマイズを公開中...');
+    await publishAll();
+    log('ok','  → 公開完了');
+    setProgress(82);
+
+    // Step E: 初期データ確認
+    log('info','[5/6] 既存データ確認 (leenai_b05_drayrules)...');
+    const existingData = await dvGet('leenai_b05_drayrules?$select=leenai_name&$top=10');
+    const existingNames = (existingData.value||[]).map(d=>d.leenai_name);
+    setProgress(88);
+
+    // Step F: 初期データ投入
+    log('info','[6/6] 初期データ投入 (6件)...');
+    let inserted = 0, skipped = 0;
+    for(const rec of INITIAL_DATA){
+      if(existingNames.includes(rec.leenai_name)){
+        log('warn', `  SKIP: ${rec.leenai_name} (既存)`);
+        skipped++;
+      } else {
+        const clean = Object.fromEntries(Object.entries(rec).filter(([,v])=>v!==null));
+        await dvPost('leenai_b05_drayrules', clean);
+        log('ok', `  INSERT: ${rec.leenai_name}`);
+        inserted++;
+      }
+    }
+    setProgress(100);
+    log('ok', `════ 完了: 投入${inserted}件 / スキップ${skipped}件 ════`);
+    log('ok', '✅ 全作業完了');
+    document.getElementById('state-rule').textContent = '✅ 存在';
+    document.getElementById('state-rule').className = 'tbl-state state-ok';
+    document.getElementById('state-sched').textContent = '✅ 存在';
+    document.getElementById('state-sched').className = 'tbl-state state-ok';
+    document.getElementById('state-exc').textContent = '✅ 存在';
+    document.getElementById('state-exc').className = 'tbl-state state-ok';
+  } catch(e){
+    log('err', '❌ エラー: ' + e.message.slice(0,120));
+    console.error(e);
+  }
+  document.getElementById('btnBuild').disabled = false;
+}
+
+/* ──────────── ヘルパー ──────────── */
+async function tableExists(logicalName){
+  const r = await dvGet(`EntityDefinitions?$filter=LogicalName eq '${logicalName}'&$select=LogicalName`);
+  return (r.value||[]).length > 0;
+}
+
+async function createTable(logicalName, schemaName, displayLabel){
+  const body = {
+    "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata",
+    SchemaName: schemaName,
+    DisplayName: { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:displayLabel, LanguageCode:1041 }] },
+    DisplayCollectionName: { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:displayLabel, LanguageCode:1041 }] },
+    HasActivities: false, HasNotes: false, IsActivity: false,
+    OwnershipType: "UserOwned",
+    PrimaryNameAttribute: "leenai_name",
+    PrimaryAttribute: {
+      "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+      SchemaName: "leenai_name",
+      RequiredLevel: { Value:"None" },
+      MaxLength: 200,
+      DisplayName: { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:"名前", LanguageCode:1041 }] }
+    }
+  };
+  await dvPost('EntityDefinitions', body, { 'MSCRM-SolutionUniqueName': CFG.SOLUTION });
+}
+
+async function ensureFields(logicalName, fields){
+  const existing = await dvGet(`EntityDefinitions(LogicalName='${logicalName}')/Attributes?$select=LogicalName`);
+  const existingSet = new Set((existing.value||[]).map(a=>a.LogicalName));
+  let added = 0;
+  for(const f of fields){
+    const ln = f.schema.toLowerCase();
+    if(existingSet.has(ln)){
+      log('plain', `  SKIP field: ${ln}`);
+      continue;
+    }
+    const body = buildFieldBody(f);
+    try {
+      await dvPost(`EntityDefinitions(LogicalName='${logicalName}')/Attributes`, body, { 'MSCRM-SolutionUniqueName': CFG.SOLUTION });
+      log('ok', `  ADD field: ${ln} (${f.type})`);
+      added++;
+    } catch(e){
+      log('warn', `  WARN field ${ln}: ${e.message.slice(0,60)}`);
+    }
+  }
+  if(added === 0) log('plain', '  全フィールド既存 — スキップ');
+}
+
+function buildFieldBody(f){
+  const dispLabel = { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:f.label, LanguageCode:1041 }] };
+  const req = { Value:"None" };
+  if(f.type === 'String'){
+    return { "@odata.type":"Microsoft.Dynamics.CRM.StringAttributeMetadata", SchemaName:f.schema, MaxLength:f.maxLen||100, DisplayName:dispLabel, RequiredLevel:req };
+  } else if(f.type === 'Memo'){
+    return { "@odata.type":"Microsoft.Dynamics.CRM.MemoAttributeMetadata", SchemaName:f.schema, MaxLength:f.maxLen||2000, DisplayName:dispLabel, RequiredLevel:req };
+  } else if(f.type === 'Integer'){
+    return { "@odata.type":"Microsoft.Dynamics.CRM.IntegerAttributeMetadata", SchemaName:f.schema, MinValue:0, MaxValue:2147483647, DisplayName:dispLabel, RequiredLevel:req };
+  } else if(f.type === 'Boolean'){
+    return { "@odata.type":"Microsoft.Dynamics.CRM.BooleanAttributeMetadata", SchemaName:f.schema, DefaultValue:true,
+      TrueOption:{ Value:1, Label:{ "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:"有効", LanguageCode:1041 }] } },
+      FalseOption:{ Value:0, Label:{ "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:"無効", LanguageCode:1041 }] } },
+      DisplayName:dispLabel, RequiredLevel:req };
+  } else if(f.type === 'DateTime'){
+    return { "@odata.type":"Microsoft.Dynamics.CRM.DateTimeAttributeMetadata", SchemaName:f.schema, Format:"DateAndTime", DisplayName:dispLabel, RequiredLevel:req };
+  }
+}
+
+async function publishAll(){
+  await dvPost('PublishAllXml', {});
+}
+
+/* ──────────── UI ──────────── */
+function log(type, msg){
+  const box = document.getElementById('logBox');
+  const now = new Date().toLocaleTimeString('ja-JP',{hour12:false});
+  const cls = {ok:'log-ok',err:'log-err',warn:'log-warn',info:'log-info',plain:'log-plain'}[type]||'log-plain';
+  const prefix = {ok:'✓',err:'✗',warn:'△',info:'»',plain:' '}[type]||' ';
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${now}</span><span class="${cls}">${prefix} ${msg}</span>`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearLog(){ document.getElementById('logBox').innerHTML = ''; }
+function setProgress(p){ document.getElementById('progressFill').style.width = p + '%'; }
+
+/* ──────────── 起動処理 ──────────── */
+window.addEventListener('load', ()=>{
+  const t = sessionStorage.getItem('b05_token');
+  const exp = parseInt(sessionStorage.getItem('b05_expiry')||'0');
+  if(t && Date.now() < exp){ TOKEN = t; onAuthOk(); log('ok','セッショントークン復元済み'); }
+  if(location.search.includes('code=')){ handleCallback(); }
+});
+</script>
+</body>
+</html>
