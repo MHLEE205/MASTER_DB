@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LEENAI B-05 Dataverse テーブル作成ツール v1.0</title>
+<title>LEENAI B-05 Dataverse テーブル作成ツール v1.1</title>
 <style>
 :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;--accent:#00c6a2;--text:#e6edf3;--text-sub:#8b949e;--ok:#3fb950;--warn:#d29922;--err:#f85149;--radius:8px;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -55,7 +55,7 @@ footer{text-align:center;padding:20px;color:var(--text-sub);font-size:11px;borde
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
     <span id="authStatus" class="status-chip"><span class="dot dot-none"></span>未認証</span>
-    <span class="ver-badge">v1.0</span>
+    <span class="ver-badge">v1.1</span>
   </div>
 </header>
 <main>
@@ -315,6 +315,8 @@ async function buildAll(){
       log('info','  → テーブル作成中...');
       await createTable('leenai_b05_drayschedule', 'leenai_b05_Drayschedule', '確定スケジュール');
       log('ok','  → テーブル作成完了');
+      log('plain','  → 3秒待機中...');
+      await new Promise(r=>setTimeout(r,3000));
     } else {
       log('ok','  → 既存テーブル確認済み');
     }
@@ -330,6 +332,8 @@ async function buildAll(){
       log('info','  → テーブル作成中...');
       await createTable('leenai_b05_ruleexception', 'leenai_b05_Ruleexception', 'ルール例外');
       log('ok','  → テーブル作成完了');
+      log('plain','  → 3秒待機中...');
+      await new Promise(r=>setTimeout(r,3000));
     } else {
       log('ok','  → 既存テーブル確認済み');
     }
@@ -393,15 +397,7 @@ async function createTable(logicalName, schemaName, displayLabel){
     DisplayName: { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:displayLabel, LanguageCode:1041 }] },
     DisplayCollectionName: { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:displayLabel, LanguageCode:1041 }] },
     HasActivities: false, HasNotes: false, IsActivity: false,
-    OwnershipType: "UserOwned",
-    PrimaryNameAttribute: "leenai_name",
-    PrimaryAttribute: {
-      "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
-      SchemaName: "leenai_name",
-      RequiredLevel: { Value:"None" },
-      MaxLength: 200,
-      DisplayName: { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:"名前", LanguageCode:1041 }] }
-    }
+    OwnershipType: "UserOwned"
   };
   await dvPost('EntityDefinitions', body, { 'MSCRM-SolutionUniqueName': CFG.SOLUTION });
 }
@@ -438,10 +434,7 @@ function buildFieldBody(f){
   } else if(f.type === 'Integer'){
     return { "@odata.type":"Microsoft.Dynamics.CRM.IntegerAttributeMetadata", SchemaName:f.schema, MinValue:0, MaxValue:2147483647, DisplayName:dispLabel, RequiredLevel:req };
   } else if(f.type === 'Boolean'){
-    return { "@odata.type":"Microsoft.Dynamics.CRM.BooleanAttributeMetadata", SchemaName:f.schema, DefaultValue:true,
-      TrueOption:{ Value:1, Label:{ "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:"有効", LanguageCode:1041 }] } },
-      FalseOption:{ Value:0, Label:{ "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:"無効", LanguageCode:1041 }] } },
-      DisplayName:dispLabel, RequiredLevel:req };
+    return { "@odata.type":"Microsoft.Dynamics.CRM.BooleanAttributeMetadata", SchemaName:f.schema, DefaultValue:true, DisplayName:dispLabel, RequiredLevel:req };
   } else if(f.type === 'DateTime'){
     return { "@odata.type":"Microsoft.Dynamics.CRM.DateTimeAttributeMetadata", SchemaName:f.schema, Format:"DateAndTime", DisplayName:dispLabel, RequiredLevel:req };
   }
