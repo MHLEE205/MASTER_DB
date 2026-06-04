@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LEENAI B-05 Dataverse テーブル作成ツール v1.3</title>
+<title>LEENAI B-05 Dataverse テーブル作成ツール v1.4</title>
 <style>
 :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;--accent:#00c6a2;--text:#e6edf3;--text-sub:#8b949e;--ok:#3fb950;--warn:#d29922;--err:#f85149;--radius:8px;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -55,7 +55,7 @@ footer{text-align:center;padding:20px;color:var(--text-sub);font-size:11px;borde
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
     <span id="authStatus" class="status-chip"><span class="dot dot-none"></span>未認証</span>
-    <span class="ver-badge">v1.3</span>
+    <span class="ver-badge">v1.4</span>
   </div>
 </header>
 <main>
@@ -315,8 +315,8 @@ async function buildAll(){
       log('info','  → テーブル作成中...');
       await createTable('leenai_b05_drayschedule', 'leenai_b05_Drayschedule', '確定スケジュール');
       log('ok','  → テーブル作成完了');
-      log('plain','  → 3秒待機中...');
-      await new Promise(r=>setTimeout(r,3000));
+      log('plain','  → テーブル準備確認中...');
+      await waitForTable('leenai_b05_drayschedule');
     } else {
       log('ok','  → 既存テーブル確認済み');
     }
@@ -332,8 +332,8 @@ async function buildAll(){
       log('info','  → テーブル作成中...');
       await createTable('leenai_b05_ruleexception', 'leenai_b05_Ruleexception', 'ルール例外');
       log('ok','  → テーブル作成完了');
-      log('plain','  → 3秒待機中...');
-      await new Promise(r=>setTimeout(r,3000));
+      log('plain','  → テーブル準備確認中...');
+      await waitForTable('leenai_b05_ruleexception');
     } else {
       log('ok','  → 既存テーブル確認済み');
     }
@@ -388,6 +388,17 @@ async function buildAll(){
 async function tableExists(logicalName){
   const r = await dvGet(`EntityDefinitions?$filter=LogicalName eq '${logicalName}'&$select=LogicalName`);
   return (r.value||[]).length > 0;
+}
+
+async function waitForTable(logicalName, maxWaitMs=120000){
+  const start = Date.now();
+  while(Date.now() - start < maxWaitMs){
+    if(await tableExists(logicalName)) return;
+    const elapsed = Math.round((Date.now()-start)/1000);
+    log('plain', `  → 準備待機中... ${elapsed}秒`);
+    await new Promise(r=>setTimeout(r,5000));
+  }
+  throw new Error(`テーブル準備タイムアウト: ${logicalName}`);
 }
 
 function mkLabel(text, lang=1033){
