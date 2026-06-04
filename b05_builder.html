@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LEENAI B-05 Dataverse テーブル作成ツール v1.4</title>
+<title>LEENAI B-05 Dataverse テーブル作成ツール v1.5</title>
 <style>
 :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;--accent:#00c6a2;--text:#e6edf3;--text-sub:#8b949e;--ok:#3fb950;--warn:#d29922;--err:#f85149;--radius:8px;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -55,7 +55,7 @@ footer{text-align:center;padding:20px;color:var(--text-sub);font-size:11px;borde
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
     <span id="authStatus" class="status-chip"><span class="dot dot-none"></span>未認証</span>
-    <span class="ver-badge">v1.4</span>
+    <span class="ver-badge">v1.5</span>
   </div>
 </header>
 <main>
@@ -164,12 +164,12 @@ const FIELDS_EXC = [
 ];
 
 const INITIAL_DATA = [
-  { leenai_name:'池谷_weekday_TOKYO',    leenai_truck:'池谷', leenai_rule:'weekday',  leenai_timezone:null,  leenai_hon:1, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:'true'  },
-  { leenai_name:'池谷_saturday_TOKYO',   leenai_truck:'池谷', leenai_rule:'saturday', leenai_timezone:null,  leenai_hon:2, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:'true'  },
-  { leenai_name:'IT_weekday_TOKYO',      leenai_truck:'IT',   leenai_rule:'weekday',  leenai_timezone:null,  leenai_hon:1, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:'true'  },
-  { leenai_name:'国際_weekday_AM_TOKYO', leenai_truck:'国際', leenai_rule:'weekday',  leenai_timezone:'午前',leenai_hon:2, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:'true'  },
-  { leenai_name:'国際_weekday_PM_TOKYO', leenai_truck:'国際', leenai_rule:'weekday',  leenai_timezone:'午後',leenai_hon:2, leenai_timerange:null,           leenai_pol:'TOKYO', leenai_active:'true'  },
-  { leenai_name:'国際_saturday_TOKYO',   leenai_truck:'国際', leenai_rule:'saturday', leenai_timezone:null,  leenai_hon:2, leenai_timerange:null,           leenai_pol:'TOKYO', leenai_active:'true'  }
+  { leenai_truck:'池谷', leenai_rule:'weekday',  leenai_timezone:null,  leenai_hon:1, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:'true' },
+  { leenai_truck:'池谷', leenai_rule:'saturday', leenai_timezone:null,  leenai_hon:2, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:'true' },
+  { leenai_truck:'IT',   leenai_rule:'weekday',  leenai_timezone:null,  leenai_hon:1, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:'true' },
+  { leenai_truck:'国際', leenai_rule:'weekday',  leenai_timezone:'午前',leenai_hon:2, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:'true' },
+  { leenai_truck:'国際', leenai_rule:'weekday',  leenai_timezone:'午後',leenai_hon:2, leenai_timerange:null,          leenai_pol:'TOKYO', leenai_active:'true' },
+  { leenai_truck:'国際', leenai_rule:'saturday', leenai_timezone:null,  leenai_hon:2, leenai_timerange:null,          leenai_pol:'TOKYO', leenai_active:'true' }
 ];
 
 let TOKEN = null;
@@ -350,21 +350,23 @@ async function buildAll(){
 
     // Step E: 初期データ確認
     log('info','[5/6] 既存データ確認 (leenai_b05_drayrules)...');
-    const existingData = await dvGet('leenai_b05_drayrules?$select=leenai_name&$top=10');
-    const existingNames = (existingData.value||[]).map(d=>d.leenai_name);
+    const existingData = await dvGet('leenai_b05_drayrules?$select=leenai_truck,leenai_rule,leenai_timezone&$top=50');
+    const existingKeys = new Set((existingData.value||[]).map(d=>`${d.leenai_truck}|${d.leenai_rule}|${d.leenai_timezone||''}`));
     setProgress(88);
 
     // Step F: 初期データ投入
     log('info','[6/6] 初期データ投入 (6件)...');
     let inserted = 0, skipped = 0;
     for(const rec of INITIAL_DATA){
-      if(existingNames.includes(rec.leenai_name)){
-        log('warn', `  SKIP: ${rec.leenai_name} (既存)`);
+      const key = `${rec.leenai_truck}|${rec.leenai_rule}|${rec.leenai_timezone||''}`;
+      const label = `${rec.leenai_truck} ${rec.leenai_rule} ${rec.leenai_timezone||''}`.trim();
+      if(existingKeys.has(key)){
+        log('warn', `  SKIP: ${label} (既存)`);
         skipped++;
       } else {
         const clean = Object.fromEntries(Object.entries(rec).filter(([,v])=>v!==null));
         await dvPost('leenai_b05_drayrules', clean);
-        log('ok', `  INSERT: ${rec.leenai_name}`);
+        log('ok', `  INSERT: ${label}`);
         inserted++;
       }
     }
@@ -386,22 +388,30 @@ async function buildAll(){
 
 /* ──────────── ヘルパー ──────────── */
 async function tableExists(logicalName){
-  const r = await dvGet(`EntityDefinitions?$filter=LogicalName eq '${logicalName}'&$select=LogicalName`);
-  return (r.value||[]).length > 0;
+  try {
+    await dvGet(`EntityDefinitions(LogicalName='${logicalName}')?$select=LogicalName`);
+    return true;
+  } catch(e){
+    if(e.status===404||e.status===400) return false;
+    throw e;
+  }
 }
 
-async function waitForTable(logicalName, maxWaitMs=120000){
+async function waitForTable(logicalName, maxWaitMs=180000){
   const start = Date.now();
   while(Date.now() - start < maxWaitMs){
-    if(await tableExists(logicalName)) return;
+    if(await tableExists(logicalName)){
+      log('ok', `  → 準備完了 (${Math.round((Date.now()-start)/1000)}秒)`);
+      return;
+    }
     const elapsed = Math.round((Date.now()-start)/1000);
     log('plain', `  → 準備待機中... ${elapsed}秒`);
-    await new Promise(r=>setTimeout(r,5000));
+    await new Promise(r=>setTimeout(r,8000));
   }
   throw new Error(`テーブル準備タイムアウト: ${logicalName}`);
 }
 
-function mkLabel(text, lang=1033){
+function mkLabel(text, lang=1041){
   return { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:text, LanguageCode:lang }] };
 }
 async function createTable(logicalName, schemaName, displayLabel){
