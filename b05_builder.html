@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LEENAI B-05 Dataverse テーブル作成ツール v1.2</title>
+<title>LEENAI B-05 Dataverse テーブル作成ツール v1.3</title>
 <style>
 :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;--accent:#00c6a2;--text:#e6edf3;--text-sub:#8b949e;--ok:#3fb950;--warn:#d29922;--err:#f85149;--radius:8px;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -55,7 +55,7 @@ footer{text-align:center;padding:20px;color:var(--text-sub);font-size:11px;borde
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
     <span id="authStatus" class="status-chip"><span class="dot dot-none"></span>未認証</span>
-    <span class="ver-badge">v1.2</span>
+    <span class="ver-badge">v1.3</span>
   </div>
 </header>
 <main>
@@ -390,24 +390,27 @@ async function tableExists(logicalName){
   return (r.value||[]).length > 0;
 }
 
+function mkLabel(text, lang=1033){
+  return { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:text, LanguageCode:lang }] };
+}
 async function createTable(logicalName, schemaName, displayLabel){
-  const label = { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:displayLabel, LanguageCode:1041 }] };
   const body = {
     "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata",
     SchemaName: schemaName,
-    DisplayName: label,
-    DisplayCollectionName: label,
+    DisplayName: mkLabel(displayLabel),
+    DisplayCollectionName: mkLabel(displayLabel),
     HasActivities: false,
     HasNotes: false,
+    IsActivity: false,
     OwnershipType: "UserOwned",
-    PrimaryNameAttribute: "leenai_name",
-    PrimaryAttribute: {
+    Attributes: [{
       "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
       SchemaName: "leenai_name",
-      RequiredLevel: { "@odata.type":"Microsoft.Dynamics.CRM.AttributeRequiredLevelManagedProperty", Value:"None" },
+      IsPrimaryName: true,
+      RequiredLevel: { Value:"None", CanBeChanged:true, ManagedPropertyLogicalName:"canmodifyrequirementlevelsettings" },
       MaxLength: 200,
-      DisplayName: { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:"名前", LanguageCode:1041 }] }
-    }
+      DisplayName: mkLabel("Name")
+    }]
   };
   await dvPost('EntityDefinitions', body, { 'MSCRM-SolutionUniqueName': CFG.SOLUTION });
 }
@@ -435,8 +438,8 @@ async function ensureFields(logicalName, fields){
 }
 
 function buildFieldBody(f){
-  const dispLabel = { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:f.label, LanguageCode:1041 }] };
-  const req = { Value:"None" };
+  const dispLabel = mkLabel(f.label);
+  const req = { Value:"None", CanBeChanged:true, ManagedPropertyLogicalName:"canmodifyrequirementlevelsettings" };
   if(f.type === 'String'){
     return { "@odata.type":"Microsoft.Dynamics.CRM.StringAttributeMetadata", SchemaName:f.schema, MaxLength:f.maxLen||100, DisplayName:dispLabel, RequiredLevel:req };
   } else if(f.type === 'Memo'){
