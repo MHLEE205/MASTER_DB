@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LEENAI B-05 Dataverse テーブル作成ツール v1.1</title>
+<title>LEENAI B-05 Dataverse テーブル作成ツール v1.2</title>
 <style>
 :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;--accent:#00c6a2;--text:#e6edf3;--text-sub:#8b949e;--ok:#3fb950;--warn:#d29922;--err:#f85149;--radius:8px;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -55,7 +55,7 @@ footer{text-align:center;padding:20px;color:var(--text-sub);font-size:11px;borde
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
     <span id="authStatus" class="status-chip"><span class="dot dot-none"></span>未認証</span>
-    <span class="ver-badge">v1.1</span>
+    <span class="ver-badge">v1.2</span>
   </div>
 </header>
 <main>
@@ -138,7 +138,7 @@ const FIELDS_RULE = [
   { schema:'leenai_hon',       label:'台数',       type:'Integer' },
   { schema:'leenai_timerange', label:'時間範囲',   type:'String',   maxLen:50  },
   { schema:'leenai_pol',       label:'POL',        type:'String',   maxLen:20  },
-  { schema:'leenai_active',    label:'有効',       type:'Boolean' }
+  { schema:'leenai_active',    label:'有効',       type:'String',   maxLen:10  }
 ];
 
 const FIELDS_SCHED = [
@@ -164,12 +164,12 @@ const FIELDS_EXC = [
 ];
 
 const INITIAL_DATA = [
-  { leenai_name:'池谷_weekday_TOKYO',    leenai_truck:'池谷', leenai_rule:'weekday',  leenai_timezone:null,  leenai_hon:1, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:true  },
-  { leenai_name:'池谷_saturday_TOKYO',   leenai_truck:'池谷', leenai_rule:'saturday', leenai_timezone:null,  leenai_hon:2, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:true  },
-  { leenai_name:'IT_weekday_TOKYO',      leenai_truck:'IT',   leenai_rule:'weekday',  leenai_timezone:null,  leenai_hon:1, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:true  },
-  { leenai_name:'国際_weekday_AM_TOKYO', leenai_truck:'国際', leenai_rule:'weekday',  leenai_timezone:'午前',leenai_hon:2, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:true  },
-  { leenai_name:'国際_weekday_PM_TOKYO', leenai_truck:'国際', leenai_rule:'weekday',  leenai_timezone:'午後',leenai_hon:2, leenai_timerange:null,           leenai_pol:'TOKYO', leenai_active:true  },
-  { leenai_name:'国際_saturday_TOKYO',   leenai_truck:'国際', leenai_rule:'saturday', leenai_timezone:null,  leenai_hon:2, leenai_timerange:null,           leenai_pol:'TOKYO', leenai_active:true  }
+  { leenai_name:'池谷_weekday_TOKYO',    leenai_truck:'池谷', leenai_rule:'weekday',  leenai_timezone:null,  leenai_hon:1, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:'true'  },
+  { leenai_name:'池谷_saturday_TOKYO',   leenai_truck:'池谷', leenai_rule:'saturday', leenai_timezone:null,  leenai_hon:2, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:'true'  },
+  { leenai_name:'IT_weekday_TOKYO',      leenai_truck:'IT',   leenai_rule:'weekday',  leenai_timezone:null,  leenai_hon:1, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:'true'  },
+  { leenai_name:'国際_weekday_AM_TOKYO', leenai_truck:'国際', leenai_rule:'weekday',  leenai_timezone:'午前',leenai_hon:2, leenai_timerange:'06:00~08:30', leenai_pol:'TOKYO', leenai_active:'true'  },
+  { leenai_name:'国際_weekday_PM_TOKYO', leenai_truck:'国際', leenai_rule:'weekday',  leenai_timezone:'午後',leenai_hon:2, leenai_timerange:null,           leenai_pol:'TOKYO', leenai_active:'true'  },
+  { leenai_name:'国際_saturday_TOKYO',   leenai_truck:'国際', leenai_rule:'saturday', leenai_timezone:null,  leenai_hon:2, leenai_timerange:null,           leenai_pol:'TOKYO', leenai_active:'true'  }
 ];
 
 let TOKEN = null;
@@ -391,13 +391,23 @@ async function tableExists(logicalName){
 }
 
 async function createTable(logicalName, schemaName, displayLabel){
+  const label = { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:displayLabel, LanguageCode:1041 }] };
   const body = {
     "@odata.type": "Microsoft.Dynamics.CRM.EntityMetadata",
     SchemaName: schemaName,
-    DisplayName: { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:displayLabel, LanguageCode:1041 }] },
-    DisplayCollectionName: { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:displayLabel, LanguageCode:1041 }] },
-    HasActivities: false, HasNotes: false, IsActivity: false,
-    OwnershipType: "UserOwned"
+    DisplayName: label,
+    DisplayCollectionName: label,
+    HasActivities: false,
+    HasNotes: false,
+    OwnershipType: "UserOwned",
+    PrimaryNameAttribute: "leenai_name",
+    PrimaryAttribute: {
+      "@odata.type": "Microsoft.Dynamics.CRM.StringAttributeMetadata",
+      SchemaName: "leenai_name",
+      RequiredLevel: { "@odata.type":"Microsoft.Dynamics.CRM.AttributeRequiredLevelManagedProperty", Value:"None" },
+      MaxLength: 200,
+      DisplayName: { "@odata.type":"Microsoft.Dynamics.CRM.Label", LocalizedLabels:[{ "@odata.type":"Microsoft.Dynamics.CRM.LocalizedLabel", Label:"名前", LanguageCode:1041 }] }
+    }
   };
   await dvPost('EntityDefinitions', body, { 'MSCRM-SolutionUniqueName': CFG.SOLUTION });
 }
